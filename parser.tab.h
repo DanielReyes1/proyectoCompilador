@@ -44,6 +44,15 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 1 "parser.y"
+
+    #include <vector>
+    #include <utility>
+    #include <string>
+    #include "ast.h"   
+
+#line 56 "parser.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -104,13 +113,23 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 8 "parser.y"
+#line 19 "parser.y"
 
     int num;
     double fval;
     char* id;
 
-#line 114 "parser.tab.h"
+    Expr* expr;
+    Stmt* stmt;
+    std::vector<Stmt*>* stmt_list;
+    std::vector<Expr*>* expr_list;
+    Function* function;
+    std::vector<Function*>* function_list;
+    std::vector<std::pair<std::string,std::string>>* param_list;
+    std::pair<std::string,std::string>* param;
+    char* type_str;
+
+#line 133 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

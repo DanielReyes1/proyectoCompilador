@@ -1,15 +1,38 @@
+%code requires {
+    #include <vector>
+    #include <utility>
+    #include <string>
+    #include "ast.h"   
+}
+
 %{
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
+#include <vector>       
+#include "ast.h"
 void yyerror(const char *s);
 int yylex(void);
+std::vector<Function*>* programa = nullptr;
 %}
+
 
 %union {
     int num;
     double fval;
     char* id;
+
+    Expr* expr;
+    Stmt* stmt;
+    std::vector<Stmt*>* stmt_list;
+    std::vector<Expr*>* expr_list;
+    Function* function;
+    std::vector<Function*>* function_list;
+    std::vector<std::pair<std::string,std::string>>* param_list;
+    std::pair<std::string,std::string>* param;
+    char* type_str;
 }
+
+
 
 %token <id> IDENTIFIER STRING_LITERAL CHAR_LITERAL
 %token <num> NUMBER TRUE FALSE
@@ -28,94 +51,121 @@ int yylex(void);
 %left EQ NEQ LT GT LEQ GEQ   
 %right ASSIGN
 
+%type <function_list> function_list
+%type <function> function
+%type <param_list> param_list param_list_nonempty
+%type <param> param
+%type <stmt_list> stmt_list
+%type <stmt> stmt
+%type <expr> expr
+%type <expr_list> arg_list arg_list_nonempty
+%type <type_str> type
+
 %%
 
 program:
-    function_list
+      function_list
+      {
+          programa = $1;  // Guardamos la lista de funciones en la variable global
+      }
 ;
 
+
 function_list:
-      function_list function
-    | function
+      function_list function { $1->push_back($2); $$ = $1; }
+    | function { $$ = new std::vector<Function*>(); $$->push_back($1); }
 ;
 
 function:
-    FN IDENTIFIER LPAREN param_list RPAREN ARROW type LBRACE stmt_list RBRACE
-        { std::cout << "Función con retorno: " << $2 << std::endl; free($2); }
+      FN IDENTIFIER LPAREN param_list RPAREN ARROW type LBRACE stmt_list RBRACE
+      {
+          Function* f = new Function();
+          f->name = $2;             
+          f->params = *$4;          
+          delete $4;                
+          f->ret_type = $7;         
+          f->body = *$9;            
+          delete $9;                
+          $$ = f;
+      }
     | FN IDENTIFIER LPAREN param_list RPAREN LBRACE stmt_list RBRACE
-        { std::cout << "Función sin retorno: " << $2 << std::endl; free($2); }
+      {
+          Function* f = new Function();
+          f->name = $2;
+          f->params = *$4;          
+          delete $4;
+          f->ret_type = "";         
+          f->body = *$7;
+          delete $7;
+          $$ = f;
+      }
 ;
 
 param_list:
-    /* vacío */
-    | param_list_nonempty
+      { $$ = new std::vector<std::pair<std::string,std::string>>(); }
+    | param_list_nonempty { $$ = $1; }
 ;
+
 
 param_list_nonempty:
       param
+    {
+        $$ = new std::vector<std::pair<std::string,std::string>>();
+        $$->push_back(*$1);
+        delete $1;
+    }
     | param_list_nonempty COMMA param
+    {
+        $$ = $1;
+        $$->push_back(*$3);
+        delete $3;
+    }
 ;
+
 
 param:
     IDENTIFIER COLON type
-    { std::cout << "Parámetro: " << $1 << std::endl; free($1); }
+    {
+        std::cout << "Parámetro: " << $1 << std::endl;
+        // Crear par<string,string> y devolverlo para agregar al vector
+        $$ = new std::pair<std::string,std::string>($1, $3);
+        free($1);
+    }
 ;
 
+
 stmt_list:
-      /* vacío */
-    | stmt_list stmt
-    | stmt
+      stmt_list stmt { $$ = $1; $$->push_back($2); }
+    | stmt { $$ = new std::vector<Stmt*>(); $$->push_back($1); }
 ;
+
 
 stmt:
       LET IDENTIFIER ASSIGN expr SEMICOLON
-        { std::cout << "Declaración de variable con asignación: " << $2 << std::endl; free($2); }
-    | LET IDENTIFIER COLON type ASSIGN expr SEMICOLON
-        { std::cout << "Declaración con tipo y asignación: " << $2 << std::endl; free($2); }
-    | LET IDENTIFIER SEMICOLON
-        { std::cout << "Declaración de variable sin asignación: " << $2 << std::endl; free($2); }
+      { $$ = new Stmt($2, $4); }
     | RETURN expr SEMICOLON
-        { std::cout << "Return con valor\n"; }
+      { $$ = new Stmt(nullptr, $2); } // return con valor
     | RETURN SEMICOLON
-        { std::cout << "Return vacío\n"; }
-    | IF expr LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE
-        { std::cout << "If-Else encontrado\n"; }
-    | WHILE expr LBRACE stmt_list RBRACE
-        { std::cout << "While encontrado\n"; }
-    | FOR LPAREN IDENTIFIER IN expr RPAREN LBRACE stmt_list RBRACE
-        { std::cout << "For encontrado con variable: " << $3 << std::endl; free($3); }
-    | expr SEMICOLON
-        { std::cout << "Expresión evaluada\n"; }
-    | LBRACE stmt_list RBRACE
-        { std::cout << "Bloque independiente\n"; }
+      { $$ = new Stmt(nullptr, nullptr); } // return vacío
 ;
 
+
 expr:
-      expr PLUS expr
-    | expr MINUS expr
-    | expr MULT expr
-    | expr DIV expr
-    | expr AND expr
-    | expr OR expr
-    | expr EQ expr
-    | expr NEQ expr
-    | expr LT expr
-    | expr GT expr
-    | expr LEQ expr
-    | expr GEQ expr
-    | IDENTIFIER ASSIGN expr        
-    | NOT expr
-    | NUMBER
-    | FLOAT
-    | TRUE
-    | FALSE
-    | CHAR_LITERAL
-    | STRING_LITERAL
-    | IDENTIFIER
+      NUMBER 
+        { $$ = new Expr(); $$->kind = Expr::INT; $$->int_val = $1; }
+    | FLOAT  
+        { $$ = new Expr(); $$->kind = Expr::FLOAT; $$->float_val = $1; }
+    | IDENTIFIER 
+        { $$ = new Expr(); $$->kind = Expr::VAR; $$->var_name = $1; }
     | IDENTIFIER LPAREN arg_list RPAREN
-        { std::cout << "Llamada a función: " << $1 << std::endl; free($1); }
-    | LPAREN expr RPAREN
+        { $$ = new Expr(); $$->kind = Expr::CALL; $$->call.callee = $1; $$->call.args = $3; }
+    | expr PLUS expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "+"; $$->binop.right = $3; }
+    | expr MINUS expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "-"; $$->binop.right = $3; }
 ;
+
+
 
 arg_list:
       /* vacío */
