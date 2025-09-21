@@ -1,11 +1,7 @@
-fn main() {
-    let x = 10;
-    let y = 20;
-
-    if x < y {
-        let resultado = 4;
+fn f(n: i32) -> i32 {
+    if n <= 1 {
+        return 1;
     } else {
-        return;
+        return n * f(n - 1);
     }
 }
-

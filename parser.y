@@ -53,7 +53,7 @@ param_list:
 
 param_list_nonempty:
       param
-    | param_list_nonempty COMMA IDENTIFIER
+    | param_list_nonempty COMMA param
 ;
 
 param:
@@ -62,7 +62,8 @@ param:
 ;
 
 stmt_list:
-      stmt_list stmt
+      /* vacío */
+    | stmt_list stmt
     | stmt
 ;
 

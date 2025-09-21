@@ -19,8 +19,9 @@
 "char"      { return CHAR; }
 "str"       { return STR; }
 "="         { return ASSIGN; }
-"true"      { yylval.num = 1; return BOOL; }
-"false"     { yylval.num = 0; return BOOL; }
+"true"      { yylval.num = 1; return TRUE; }
+"false"     { yylval.num = 0; return FALSE; }
+
 
 [a-zA-Z_][a-zA-Z0-9_]*   { yylval.id = strdup(yytext); return IDENTIFIER; }
 [0-9]+\.[0-9]+          { yylval.fval = atof(yytext); return FLOAT; }
