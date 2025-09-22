@@ -66,7 +66,7 @@ std::vector<Function*>* programa = nullptr;
 program:
       function_list
       {
-          programa = $1;  // Guardamos la lista de funciones en la variable global
+          programa = $1; 
       }
 ;
 
@@ -127,7 +127,6 @@ param:
     IDENTIFIER COLON type
     {
         std::cout << "Parámetro: " << $1 << std::endl;
-        // Crear par<string,string> y devolverlo para agregar al vector
         $$ = new std::pair<std::string,std::string>($1, $3);
         free($1);
     }
@@ -135,46 +134,126 @@ param:
 
 
 stmt_list:
-      stmt_list stmt { $$ = $1; $$->push_back($2); }
-    | stmt { $$ = new std::vector<Stmt*>(); $$->push_back($1); }
+      /* vacío */                { $$ = new std::vector<Stmt*>(); $$->push_back(new StmtEmpty()); }
+    | stmt_list stmt             { $$ = $1; $$->push_back($2); }
+    | stmt                       { $$ = new std::vector<Stmt*>(); $$->push_back($1); }
 ;
+
 
 
 stmt:
       LET IDENTIFIER ASSIGN expr SEMICOLON
-      { $$ = new Stmt($2, $4); }
+        { $$ = new StmtLet($2, $4); }
+
     | RETURN expr SEMICOLON
-      { $$ = new Stmt(nullptr, $2); } // return con valor
+        { $$ = new StmtReturn($2); }
+
     | RETURN SEMICOLON
-      { $$ = new Stmt(nullptr, nullptr); } // return vacío
+        { $$ = new StmtReturn(nullptr); }
+
+    | IF expr LBRACE stmt_list RBRACE
+        { $$ = new StmtIf($2, $4, new std::vector<Stmt*>()); }
+
+    | IF expr LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE
+        { $$ = new StmtIf($2, $4, $8); } 
+
+    | WHILE expr LBRACE stmt_list RBRACE
+        { $$ = new StmtWhile($2, *$4); }
+
+    | FOR LPAREN IDENTIFIER IN expr RPAREN LBRACE stmt_list RBRACE
+        { $$ = new StmtFor($3, $5, $8); }
+
+    | IDENTIFIER ASSIGN expr SEMICOLON
+        {
+            Expr* assign_expr = new Expr();
+            assign_expr->kind = Expr::ASSIGN;
+            assign_expr->var_name = $1;
+            assign_expr->rhs = $3;
+            $$ = new StmtExpr(assign_expr);
+        }
+
+    | expr SEMICOLON
+        { $$ = new StmtExpr($1); }
+
+    | LBRACE stmt_list RBRACE
+        { $$ = new StmtBlock($2); }
 ;
+
+
 
 
 expr:
       NUMBER 
         { $$ = new Expr(); $$->kind = Expr::INT; $$->int_val = $1; }
+
     | FLOAT  
         { $$ = new Expr(); $$->kind = Expr::FLOAT; $$->float_val = $1; }
+
     | IDENTIFIER 
         { $$ = new Expr(); $$->kind = Expr::VAR; $$->var_name = $1; }
+
     | IDENTIFIER LPAREN arg_list RPAREN
         { $$ = new Expr(); $$->kind = Expr::CALL; $$->call.callee = $1; $$->call.args = $3; }
+
     | expr PLUS expr
         { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "+"; $$->binop.right = $3; }
+
     | expr MINUS expr
         { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "-"; $$->binop.right = $3; }
+
+    | expr MULT expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "*"; $$->binop.right = $3; }
+
+    | expr DIV expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "/"; $$->binop.right = $3; }
+
+    | expr AND expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "&&"; $$->binop.right = $3; }
+
+    | expr OR expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "||"; $$->binop.right = $3; }
+
+    | expr EQ expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "=="; $$->binop.right = $3; }
+
+    | expr NEQ expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "!="; $$->binop.right = $3; }
+
+    | expr LT expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "<"; $$->binop.right = $3; }
+
+    | expr GT expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = ">"; $$->binop.right = $3; }
+
+    | expr LEQ expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "<="; $$->binop.right = $3; }
+
+    | expr GEQ expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = ">="; $$->binop.right = $3; }
+
+    | NOT expr
+        { $$ = new Expr(); $$->kind = Expr::UNOP; $$->unop.op = "!"; $$->unop.operand = $2; }
+
+    | LPAREN expr RPAREN
+        { $$ = $2; }
 ;
+
+
 
 
 
 arg_list:
-      /* vacío */
-    | arg_list_nonempty
+      /* vacío */ 
+        { $$ = new std::vector<Expr*>(); }
+    | arg_list_nonempty 
+        { $$ = $1; }
 ;
 
 arg_list_nonempty:
       expr
+        { $$ = new std::vector<Expr*>(); $$->push_back($1); }
     | arg_list_nonempty COMMA expr
+        { $1->push_back($3); $$ = $1; }
 ;
 
 type:
