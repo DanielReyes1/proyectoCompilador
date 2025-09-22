@@ -29,7 +29,7 @@ std::vector<Function*>* programa = nullptr;
     std::vector<Function*>* function_list;
     std::vector<std::pair<std::string,std::string>>* param_list;
     std::pair<std::string,std::string>* param;
-    char* type_str;
+    const char* type_str;
 }
 
 
@@ -134,12 +134,10 @@ param:
 
 
 stmt_list:
-      /* vacío */                { $$ = new std::vector<Stmt*>(); $$->push_back(new StmtEmpty()); }
-    | stmt_list stmt             { $$ = $1; $$->push_back($2); }
-    | stmt                       { $$ = new std::vector<Stmt*>(); $$->push_back($1); }
+      /* vacío */             { $$ = new std::vector<Stmt*>(); }
+    | stmt_list stmt          { $1->push_back($2); $$ = $1; }
+    | stmt                    { $$ = new std::vector<Stmt*>(); $$->push_back($1); }
 ;
-
-
 
 stmt:
       LET IDENTIFIER ASSIGN expr SEMICOLON
@@ -152,13 +150,13 @@ stmt:
         { $$ = new StmtReturn(nullptr); }
 
     | IF expr LBRACE stmt_list RBRACE
-        { $$ = new StmtIf($2, $4, new std::vector<Stmt*>()); }
+        { $$ = new StmtIf($2, $4, new std::vector<Stmt*>()); }    
 
     | IF expr LBRACE stmt_list RBRACE ELSE LBRACE stmt_list RBRACE
-        { $$ = new StmtIf($2, $4, $8); } 
+        { $$ = new StmtIf($2, $4, $8); }
 
     | WHILE expr LBRACE stmt_list RBRACE
-        { $$ = new StmtWhile($2, *$4); }
+        { $$ = new StmtWhile($2, $4); }
 
     | FOR LPAREN IDENTIFIER IN expr RPAREN LBRACE stmt_list RBRACE
         { $$ = new StmtFor($3, $5, $8); }
@@ -177,9 +175,8 @@ stmt:
 
     | LBRACE stmt_list RBRACE
         { $$ = new StmtBlock($2); }
+
 ;
-
-
 
 
 expr:
@@ -257,12 +254,11 @@ arg_list_nonempty:
 ;
 
 type:
-      IDENTIFIER
-    | I32
-    | F64
-    | BOOL
-    | CHAR
-    | STR
+      I32   { $$ = "i32"; }
+    | F64   { $$ = "f64"; }
+    | BOOL  { $$ = "bool"; }
+    | CHAR  { $$ = "char"; }
+    | STR   { $$ = "str"; }
 ;
 
 %%

@@ -6,7 +6,7 @@
 extern int yyparse();
 extern std::vector<Function*>* programa;
 
-// Expande print_expr para todos los tipos
+
 void print_expr(Expr* e) {
     if (!e) return;
 
@@ -54,13 +54,13 @@ void print_expr(Expr* e) {
     }
 }
 
-// Ahora print_stmt solo llama al método virtual
+
 void print_stmt(Stmt* s) {
     if (!s) return;
     s->print();
 }
 
-// Función para imprimir funciones completas
+
 void print_function(Function* f) {
     if (!f) return;
     std::cout << "fn " << f->name << "(";

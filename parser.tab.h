@@ -127,7 +127,7 @@ union YYSTYPE
     std::vector<Function*>* function_list;
     std::vector<std::pair<std::string,std::string>>* param_list;
     std::pair<std::string,std::string>* param;
-    char* type_str;
+    const char* type_str;
 
 #line 133 "parser.tab.h"
 

@@ -59,6 +59,14 @@ struct Expr {
                 std::cout << unop.op;
                 unop.operand->print();
                 break;
+            case CALL:
+                std::cout << call.callee << "(";
+                for (size_t i = 0; i < call.args->size(); i++) {
+                    (*call.args)[i]->print();
+                    if (i + 1 < call.args->size()) std::cout << ", ";
+                }
+                std::cout << ")";
+                break;
             default: std::cout << "?"; break;
         }
 }
@@ -83,7 +91,6 @@ struct StmtIf : public Stmt {
 
     StmtIf(Expr* c, std::vector<Stmt*>* t, std::vector<Stmt*>* e)
         : cond(c), then_block(t), else_block(e) {}
-    
     void print() override {
         std::cout << "if (";
         cond->print();              
@@ -107,15 +114,16 @@ struct StmtIf : public Stmt {
 
 struct StmtWhile : Stmt {
     Expr* cond;
-    std::vector<Stmt*> body;
+    std::vector<Stmt*>* body;
 
-    StmtWhile(Expr* c, std::vector<Stmt*> b) : cond(c), body(b) {}
+    // Constructor por valor
+    StmtWhile(Expr* c, std::vector<Stmt*>* b) : cond(c), body(b) {}
 
     void print() override {
         std::cout << "while (";
         cond->print();
         std::cout << ") {\n";
-        for(auto s : body) s->print();
+        for(auto s : *body) s->print();
         std::cout << "}\n";
     }
 };
@@ -205,7 +213,7 @@ struct Function {
         std::cout << " {\n";
 
         for (auto stmt : body)
-            stmt->print();   // esto recorre todo el cuerpo de la función
+            stmt->print();   
 
         std::cout << "}\n";
     }
