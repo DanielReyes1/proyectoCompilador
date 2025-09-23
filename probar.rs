@@ -1,7 +1,12 @@
-fn f(n: i32) -> i32 {
-    if n <= 1 {
-        return 1;
+fn suma(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+fn main() {
+    let x = 10;
+    let y = 20;
+    if x < y {
+        let resultado = suma(x, y);
     } else {
-        return n * f(n - 1);
+        return;
     }
 }

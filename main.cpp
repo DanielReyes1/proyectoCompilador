@@ -6,62 +6,61 @@
 extern int yyparse();
 extern std::vector<Function*>* programa;
 
+// Función para imprimir el árbol completo (Expr dentro de Stmt)
+void print_stmt_tree(Stmt* s, int indent = 0) {
+    if (!s) return;
 
-void print_expr(Expr* e) {
-    if (!e) return;
-
-    switch(e->kind) {
-        case Expr::INT:
-            std::cout << e->int_val;
-            break;
-        case Expr::FLOAT:
-            std::cout << e->float_val;
-            break;
-        case Expr::VAR:
-            std::cout << e->var_name;
-            break;
-        case Expr::CALL:
-            std::cout << e->call.callee << "(";
-            for (size_t i = 0; i < e->call.args->size(); ++i) {
-                print_expr((*e->call.args)[i]);
-                if (i + 1 < e->call.args->size()) std::cout << ", ";
-            }
-            std::cout << ")";
-            break;
-        case Expr::BINOP:
-            std::cout << "(";
-            print_expr(e->binop.left);
-            std::cout << " " << e->binop.op << " ";
-            print_expr(e->binop.right);
-            std::cout << ")";
-            break;
-        case Expr::UNOP:
-            std::cout << "(" << e->unop.op;
-            print_expr(e->unop.operand);
-            std::cout << ")";
-            break;
-        case Expr::BOOL:
-            std::cout << (e->bool_val ? "true" : "false");
-            break;
-        case Expr::CHAR:
-            std::cout << "'" << e->char_val << "'";
-            break;
-        case Expr::STRING:
-            std::cout << "\"" << e->string_val << "\"";
-            break;
-        default:
-            break;
+    std::string pad(indent, ' '); // Indentación
+    // Detectamos StmtBlock para aumentar indentación recursiva
+    if (auto block = dynamic_cast<StmtBlock*>(s)) {
+        std::cout << pad << "{\n";
+        for (auto stmt : *block->stmts)
+            print_stmt_tree(stmt, indent + 4);
+        std::cout << pad << "}\n";
+    } else if (auto ifstmt = dynamic_cast<StmtIf*>(s)) {
+        std::cout << pad << "if (";
+        ifstmt->cond->print();
+        std::cout << ") ";
+        print_stmt_tree(new StmtBlock(ifstmt->then_block), indent); // imprime bloque then
+        if (ifstmt->else_block && !ifstmt->else_block->empty()) {
+            std::cout << pad << "else ";
+            print_stmt_tree(new StmtBlock(ifstmt->else_block), indent);
+        }
+    } else if (auto whilestmt = dynamic_cast<StmtWhile*>(s)) {
+        std::cout << pad << "while (";
+        whilestmt->cond->print();
+        std::cout << ") ";
+        print_stmt_tree(new StmtBlock(whilestmt->body), indent);
+    } else if (auto forstmt = dynamic_cast<StmtFor*>(s)) {
+        std::cout << pad << "for " << forstmt->var << " in ";
+        forstmt->iter->print();
+        std::cout << " ";
+        print_stmt_tree(new StmtBlock(forstmt->body), indent);
+    } else if (auto exprstmt = dynamic_cast<StmtExpr*>(s)) {
+        std::cout << pad;
+        exprstmt->expr->print();
+        std::cout << ";\n";
+    } else if (auto letstmt = dynamic_cast<StmtLet*>(s)) {
+        std::cout << pad << "let " << letstmt->var_name;
+        if (!letstmt->type_name.empty())
+            std::cout << ": " << letstmt->type_name;
+        std::cout << " = ";
+        letstmt->value->print();
+        std::cout << ";\n";
+    } else if (auto retstmt = dynamic_cast<StmtReturn*>(s)) {
+        std::cout << pad << "return";
+        if (retstmt->value) {
+            std::cout << " ";
+            retstmt->value->print();
+        }
+        std::cout << ";\n";
+    } else {
+        s->print(); // fallback
     }
 }
 
-
-void print_stmt(Stmt* s) {
-    if (!s) return;
-    s->print();
-}
-
-
-void print_function(Function* f) {
+// Imprime la función completa
+void print_function_tree(Function* f) {
     if (!f) return;
     std::cout << "fn " << f->name << "(";
     for (size_t i = 0; i < f->params.size(); ++i) {
@@ -71,24 +70,24 @@ void print_function(Function* f) {
     std::cout << ")";
     if (!f->ret_type.empty()) std::cout << " -> " << f->ret_type;
     std::cout << " {\n";
-    for (Stmt* s : f->body) print_stmt(s);
+    for (Stmt* s : f->body)
+        print_stmt_tree(s, 4);
     std::cout << "}\n";
 }
 
 int main() {
-    std::cout << "==== Iniciando parser ====" << std::endl;
+    std::cout << "-------------------Iniciando parseo-------------------" << std::endl;
     int res = yyparse();
 
     if (res == 0) {
         std::cout << "Archivo sintácticamente correcto ✅" << std::endl;
         if (programa) {
             for (Function* f : *programa)
-                print_function(f);
+                print_function_tree(f);
         }
     } else {
-        std::cout << "Errores de sintaxis ❌" << std::endl;
+        std::cout << "Error de sintaxis ❌" << std::endl;
     }
-
-    std::cout << "==== Fin del parseo ====" << std::endl;
+    
     return res;
 }

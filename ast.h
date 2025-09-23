@@ -46,6 +46,7 @@ struct Expr {
             case INT: std::cout << int_val; break;
             case FLOAT: std::cout << float_val; break;
             case VAR: std::cout << var_name; break;
+            case BOOL: std::cout << (bool_val ? "true" : "false"); break;
             case ASSIGN:
                 std::cout << var_name << " = ";
                 if(rhs) rhs->print();
@@ -92,16 +93,16 @@ struct StmtIf : public Stmt {
     StmtIf(Expr* c, std::vector<Stmt*>* t, std::vector<Stmt*>* e)
         : cond(c), then_block(t), else_block(e) {}
     void print() override {
-        std::cout << "if (";
+        std::cout << "if ";
         cond->print();              
-        std::cout << ") {\n";
+        std::cout << " {\n";
 
         for (auto stmt : *then_block) 
             stmt->print();
 
         std::cout << "}";
 
-        if (else_block && !else_block->empty()) {
+        if (else_block) {
             std::cout << " else {\n";
             for (auto stmt : *else_block)
                 stmt->print();
@@ -120,9 +121,9 @@ struct StmtWhile : Stmt {
     StmtWhile(Expr* c, std::vector<Stmt*>* b) : cond(c), body(b) {}
 
     void print() override {
-        std::cout << "while (";
+        std::cout << "while ";
         cond->print();
-        std::cout << ") {\n";
+        std::cout << " {\n";
         for(auto s : *body) s->print();
         std::cout << "}\n";
     }
@@ -139,9 +140,9 @@ struct StmtFor : public Stmt {
         : var(v), iter(i), body(b) {}
 
     void print() override {
-        std::cout << "for (" << var << " in ";
+        std::cout << "for " << var << " in ";
         iter->print();
-        std::cout << ") {\n";
+        std::cout << " {\n";
         for (auto stmt : *body) stmt->print();
         std::cout << "}\n";
     }
@@ -176,13 +177,23 @@ struct StmtBlock : public Stmt {
 };
 
 struct StmtLet : Stmt {
-    StmtLet(char* n, Expr* v) { var_name = n; value = v; }
+    const char* type;  
+    std::string type_name;
+    StmtLet(char* n, Expr* v, const char* t = nullptr, std::string tn = "") {
+        var_name = n;
+        value = v;
+        type = t;
+        type_name = tn;
+    }
     void print() override {
-        std::cout << "let " << var_name << " = ";
+        std::cout << "let " << var_name;
+        if (type) std::cout << ": " << type;
+        std::cout << " = ";
         if (value) value->print();
         std::cout << ";\n";
     }
 };
+
 
 struct StmtReturn : Stmt {
     StmtReturn(Expr* v) { value = v; }

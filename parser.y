@@ -141,7 +141,10 @@ stmt_list:
 
 stmt:
       LET IDENTIFIER ASSIGN expr SEMICOLON
-        { $$ = new StmtLet($2, $4); }
+        { $$ = new StmtLet($2, $4, nullptr, ""); }
+
+    | LET IDENTIFIER COLON type ASSIGN expr SEMICOLON
+        { $$ = new StmtLet($2, $6, $4, $4); }
 
     | RETURN expr SEMICOLON
         { $$ = new StmtReturn($2); }
@@ -158,8 +161,8 @@ stmt:
     | WHILE expr LBRACE stmt_list RBRACE
         { $$ = new StmtWhile($2, $4); }
 
-    | FOR LPAREN IDENTIFIER IN expr RPAREN LBRACE stmt_list RBRACE
-        { $$ = new StmtFor($3, $5, $8); }
+    | FOR IDENTIFIER IN expr LBRACE stmt_list RBRACE
+        { $$ = new StmtFor($2, $4, $6); }
 
     | IDENTIFIER ASSIGN expr SEMICOLON
         {
@@ -185,6 +188,18 @@ expr:
 
     | FLOAT  
         { $$ = new Expr(); $$->kind = Expr::FLOAT; $$->float_val = $1; }
+
+    | TRUE   
+        { $$ = new Expr(); $$->kind = Expr::BOOL; $$->bool_val = true; }
+
+    | FALSE  
+        { $$ = new Expr(); $$->kind = Expr::BOOL; $$->bool_val = false; }
+    
+    | CHAR_LITERAL 
+        { $$ = new Expr(); $$->kind = Expr::CHAR; $$->char_val = $1[0]; }
+    
+    | STRING_LITERAL 
+        { $$ = new Expr(); $$->kind = Expr::STRING; $$->string_val = $1; }
 
     | IDENTIFIER 
         { $$ = new Expr(); $$->kind = Expr::VAR; $$->var_name = $1; }
