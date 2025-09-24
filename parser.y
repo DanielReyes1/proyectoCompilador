@@ -37,16 +37,16 @@ std::vector<Function*>* programa = nullptr;
 %token <id> IDENTIFIER STRING_LITERAL CHAR_LITERAL
 %token <num> NUMBER TRUE FALSE
 %token <fval> FLOAT
-%token LET FN IF ELSE WHILE FOR IN RETURN
+%token LET FN IF ELSE WHILE FOR IN RETURN MUT
 %token I32 F64 BOOL CHAR STR
-%token ASSIGN PLUS MINUS MULT DIV AND OR NOT
+%token ASSIGN PLUS MINUS MULT DIV AND OR NOT MOD
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
 %token EQ NEQ LEQ GEQ LT GT COLON ARROW
 
 %left OR
 %left AND
 %left PLUS MINUS
-%left MULT DIV
+%left MULT DIV MOD
 %right NOT
 %left EQ NEQ LT GT LEQ GEQ   
 %right ASSIGN
@@ -126,7 +126,6 @@ param_list_nonempty:
 param:
     IDENTIFIER COLON type
     {
-        std::cout << "Parámetro: " << $1 << std::endl;
         $$ = new std::pair<std::string,std::string>($1, $3);
         free($1);
     }
@@ -142,9 +141,15 @@ stmt_list:
 stmt:
       LET IDENTIFIER ASSIGN expr SEMICOLON
         { $$ = new StmtLet($2, $4, nullptr, ""); }
+    
+    | LET MUT IDENTIFIER ASSIGN expr SEMICOLON  
+        { $$ = new StmtLet($3, $5, nullptr, "", true); }
 
     | LET IDENTIFIER COLON type ASSIGN expr SEMICOLON
         { $$ = new StmtLet($2, $6, $4, $4); }
+
+    | LET MUT IDENTIFIER COLON type ASSIGN expr SEMICOLON  
+        { $$ = new StmtLet($3, $7, $5, $5, true); }
 
     | RETURN expr SEMICOLON
         { $$ = new StmtReturn($2); }
@@ -168,7 +173,7 @@ stmt:
         {
             Expr* assign_expr = new Expr();
             assign_expr->kind = Expr::ASSIGN;
-            assign_expr->var_name = $1;
+            assign_expr->var_name = $1; 
             assign_expr->rhs = $3;
             $$ = new StmtExpr(assign_expr);
         }
@@ -218,6 +223,9 @@ expr:
 
     | expr DIV expr
         { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "/"; $$->binop.right = $3; }
+
+    | expr MOD expr
+        { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "%"; $$->binop.right = $3; }
 
     | expr AND expr
         { $$ = new Expr(); $$->kind = Expr::BINOP; $$->binop.left = $1; $$->binop.op = "&&"; $$->binop.right = $3; }

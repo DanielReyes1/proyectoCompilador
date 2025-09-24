@@ -78,33 +78,35 @@ extern int yydebug;
     FOR = 270,                     /* FOR  */
     IN = 271,                      /* IN  */
     RETURN = 272,                  /* RETURN  */
-    I32 = 273,                     /* I32  */
-    F64 = 274,                     /* F64  */
-    BOOL = 275,                    /* BOOL  */
-    CHAR = 276,                    /* CHAR  */
-    STR = 277,                     /* STR  */
-    ASSIGN = 278,                  /* ASSIGN  */
-    PLUS = 279,                    /* PLUS  */
-    MINUS = 280,                   /* MINUS  */
-    MULT = 281,                    /* MULT  */
-    DIV = 282,                     /* DIV  */
-    AND = 283,                     /* AND  */
-    OR = 284,                      /* OR  */
-    NOT = 285,                     /* NOT  */
-    LPAREN = 286,                  /* LPAREN  */
-    RPAREN = 287,                  /* RPAREN  */
-    LBRACE = 288,                  /* LBRACE  */
-    RBRACE = 289,                  /* RBRACE  */
-    SEMICOLON = 290,               /* SEMICOLON  */
-    COMMA = 291,                   /* COMMA  */
-    EQ = 292,                      /* EQ  */
-    NEQ = 293,                     /* NEQ  */
-    LEQ = 294,                     /* LEQ  */
-    GEQ = 295,                     /* GEQ  */
-    LT = 296,                      /* LT  */
-    GT = 297,                      /* GT  */
-    COLON = 298,                   /* COLON  */
-    ARROW = 299                    /* ARROW  */
+    MUT = 273,                     /* MUT  */
+    I32 = 274,                     /* I32  */
+    F64 = 275,                     /* F64  */
+    BOOL = 276,                    /* BOOL  */
+    CHAR = 277,                    /* CHAR  */
+    STR = 278,                     /* STR  */
+    ASSIGN = 279,                  /* ASSIGN  */
+    PLUS = 280,                    /* PLUS  */
+    MINUS = 281,                   /* MINUS  */
+    MULT = 282,                    /* MULT  */
+    DIV = 283,                     /* DIV  */
+    AND = 284,                     /* AND  */
+    OR = 285,                      /* OR  */
+    NOT = 286,                     /* NOT  */
+    MOD = 287,                     /* MOD  */
+    LPAREN = 288,                  /* LPAREN  */
+    RPAREN = 289,                  /* RPAREN  */
+    LBRACE = 290,                  /* LBRACE  */
+    RBRACE = 291,                  /* RBRACE  */
+    SEMICOLON = 292,               /* SEMICOLON  */
+    COMMA = 293,                   /* COMMA  */
+    EQ = 294,                      /* EQ  */
+    NEQ = 295,                     /* NEQ  */
+    LEQ = 296,                     /* LEQ  */
+    GEQ = 297,                     /* GEQ  */
+    LT = 298,                      /* LT  */
+    GT = 299,                      /* GT  */
+    COLON = 300,                   /* COLON  */
+    ARROW = 301                    /* ARROW  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -129,7 +131,7 @@ union YYSTYPE
     std::pair<std::string,std::string>* param;
     const char* type_str;
 
-#line 133 "parser.tab.h"
+#line 135 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

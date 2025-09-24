@@ -41,36 +41,64 @@ struct Expr {
 
     Expr() : kind(INT), int_val(0), float_val(0.0), bool_val(false),
              char_val(0), string_val(nullptr), var_name(nullptr) {}
-    void print() {
+    
+    void to_json(int indent = 0) {
+        std::string pad(indent, ' ');
         switch(kind) {
-            case INT: std::cout << int_val; break;
-            case FLOAT: std::cout << float_val; break;
-            case VAR: std::cout << var_name; break;
-            case BOOL: std::cout << (bool_val ? "true" : "false"); break;
+            case STRING:
+                std::cout << pad << "{\"type\":\"string\",\"value\":\"" << string_val << "\"}";
+                break;
+            case CHAR:
+                std::cout << pad << "{\"type\":\"char\",\"value\":\"" << char_val << "\"}";
+                break;
+            case INT:
+                std::cout << pad << "{\"type\":\"int\",\"value\":" << int_val << "}";
+                break;
+            case VAR:
+                std::cout << pad << "{\"type\":\"var\",\"name\":\"" << var_name << "\"}";
+                break;
+            case FLOAT:
+                std::cout << pad << "{\"type\":\"float\",\"value\":" << float_val << "}";
+                break;
+            case BOOL:
+                std::cout << pad << "{\"type\":\"bool\",\"value\":" << bool_val << "}";
+                break;
             case ASSIGN:
-                std::cout << var_name << " = ";
-                if(rhs) rhs->print();
+                std::cout << pad << "{\n"
+                        << pad << "  \"type\": \"Assign\",\n"
+                        << pad << "  \"var\": \"" << var_name << "\",\n"
+                        << pad << "  \"value\": ";
+                if(rhs) rhs->to_json(indent + 4);
+                else std::cout << "null";
+                std::cout << "\n" << pad << "}";
                 break;
             case BINOP:
-                binop.left->print();
-                std::cout << " " << binop.op << " ";
-                binop.right->print();
-                break;
-            case UNOP:
-                std::cout << unop.op;
-                unop.operand->print();
+                std::cout << pad << "{\n"
+                        << pad << "  \"type\":\"BinOp\",\n"
+                        << pad << "  \"op\":\"" << binop.op << "\",\n"
+                        << pad << "  \"left\":";
+                binop.left->to_json(indent + 4);
+                std::cout << ",\n" << pad << "  \"right\":";
+                binop.right->to_json(indent + 4);
+                std::cout << "\n" << pad << "}";
                 break;
             case CALL:
-                std::cout << call.callee << "(";
+                std::cout << pad << "{\n"
+                        << pad << "  \"type\":\"Call\",\n"
+                        << pad << "  \"name\":\"" << call.callee << "\",\n"
+                        << pad << "  \"args\":[\n";
                 for (size_t i = 0; i < call.args->size(); i++) {
-                    (*call.args)[i]->print();
-                    if (i + 1 < call.args->size()) std::cout << ", ";
+                    (*call.args)[i]->to_json(indent + 4);
+                    if (i + 1 < call.args->size()) std::cout << ", \n";
                 }
-                std::cout << ")";
+                std::cout << "\n" << pad << "   ]";
+                std::cout << "\n" << pad << "}";
                 break;
-            default: std::cout << "?"; break;
+            default:
+                std::cout << pad << "{\"type\":\"Unknown\"}";
         }
-}
+    }
+
 
 };
 
@@ -80,7 +108,7 @@ struct Stmt {
     Expr* value;
 
     virtual ~Stmt() {}         
-    virtual void print() = 0;   
+    virtual void to_json(int indent = 0) = 0;  
     Stmt() : var_name(nullptr), value(nullptr) {}
     Stmt(char* n, Expr* v) : var_name(n), value(v) {}
 };
@@ -92,24 +120,30 @@ struct StmtIf : public Stmt {
 
     StmtIf(Expr* c, std::vector<Stmt*>* t, std::vector<Stmt*>* e)
         : cond(c), then_block(t), else_block(e) {}
-    void print() override {
-        std::cout << "if ";
-        cond->print();              
-        std::cout << " {\n";
 
-        for (auto stmt : *then_block) 
-            stmt->print();
-
-        std::cout << "}";
-
-        if (else_block) {
-            std::cout << " else {\n";
-            for (auto stmt : *else_block)
-                stmt->print();
-            std::cout << "}";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\": \"if\",\n"
+                << pad << "  \"cond\": ";
+        cond->to_json(indent + 4);
+        std::cout << ",\n" << pad << "  \"then\": [\n";
+        for (size_t i = 0; i < then_block->size(); i++) {
+            (*then_block)[i]->to_json(indent + 4);
+            if (i + 1 < then_block->size()) std::cout << ",";
+            std::cout << "\n";
         }
-
-        std::cout << "\n";
+        std::cout << pad << "  ]";
+        if (else_block && !else_block->empty()) {
+            std::cout << ",\n" << pad << "  \"else\": [\n";
+            for (size_t i = 0; i < else_block->size(); i++) {
+                (*else_block)[i]->to_json(indent + 4);
+                if (i + 1 < else_block->size()) std::cout << ",";
+                std::cout << "\n";
+            }
+            std::cout << pad << "  ]";
+        }
+        std::cout << "\n" << pad << "}";
     }
 };
 
@@ -117,15 +151,21 @@ struct StmtWhile : Stmt {
     Expr* cond;
     std::vector<Stmt*>* body;
 
-    // Constructor por valor
     StmtWhile(Expr* c, std::vector<Stmt*>* b) : cond(c), body(b) {}
 
-    void print() override {
-        std::cout << "while ";
-        cond->print();
-        std::cout << " {\n";
-        for(auto s : *body) s->print();
-        std::cout << "}\n";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\": \"while\",\n"
+                << pad << "  \"cond\": ";
+        cond->to_json(indent + 4);
+        std::cout << ",\n" << pad << "  \"body\": [\n";
+        for (size_t i = 0; i < body->size(); i++) {
+            (*body)[i]->to_json(indent + 4);
+            if (i + 1 < body->size()) std::cout << ",";
+            std::cout << "\n";
+        }
+        std::cout << pad << "  ]\n" << pad << "}";
     }
 };
 
@@ -139,12 +179,20 @@ struct StmtFor : public Stmt {
     StmtFor(const char* v, Expr* i, std::vector<Stmt*>* b)
         : var(v), iter(i), body(b) {}
 
-    void print() override {
-        std::cout << "for " << var << " in ";
-        iter->print();
-        std::cout << " {\n";
-        for (auto stmt : *body) stmt->print();
-        std::cout << "}\n";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\": \"for\",\n"
+                << pad << "  \"var\": \"" << var << "\",\n"
+                << pad << "  \"iter\": ";
+        iter->to_json(indent + 4);
+        std::cout << ",\n" << pad << "  \"body\": [\n";
+        for (size_t i = 0; i < body->size(); i++) {
+            (*body)[i]->to_json(indent + 4);
+            if (i + 1 < body->size()) std::cout << ",";
+            std::cout << "\n";
+        }
+        std::cout << pad << "  ]\n" << pad << "}";
     }
 };
 
@@ -152,55 +200,82 @@ struct StmtExpr : public Stmt {
     Expr* expr;
     StmtExpr(Expr* e) : expr(e) {}
 
-    void print() override {
-        expr->print();
-        std::cout << ";\n";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n "
+                << pad << " \"type\": \"Expr\",\n"
+                << pad << "  \"expr\": ";
+        expr->to_json(indent + 2);
+        std::cout << "\n" << pad << "}";
     }
 };
 
 
 struct StmtEmpty : public Stmt {
-    void print() override {
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{ \"type\": \"Empty\" }";
     }
 };
 
 struct StmtBlock : public Stmt {
     std::vector<Stmt*>* stmts;
     StmtBlock(std::vector<Stmt*>* s) : stmts(s) {}
-    void print() override {
-        std::cout << "{\n";
-        for (auto stmt : *stmts) {
-            stmt->print();
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\": \"Block\",\n"
+                << pad << "  \"stmts\": [\n";
+        for (size_t i = 0; i < stmts->size(); i++) {
+            (*stmts)[i]->to_json(indent + 4);
+            if (i + 1 < stmts->size()) std::cout << ",";
+            std::cout << "\n";
         }
-        std::cout << "}\n";
+        std::cout << pad << "  ]\n" << pad << "}";
     }
 };
 
 struct StmtLet : Stmt {
     const char* type;  
     std::string type_name;
-    StmtLet(char* n, Expr* v, const char* t = nullptr, std::string tn = "") {
+    bool is_mutable;
+    StmtLet(char* n, Expr* v, const char* t = nullptr, std::string tn = "", bool mutable_flag = false) {
         var_name = n;
         value = v;
         type = t;
         type_name = tn;
+        is_mutable = mutable_flag; 
     }
-    void print() override {
-        std::cout << "let " << var_name;
-        if (type) std::cout << ": " << type;
-        std::cout << " = ";
-        if (value) value->print();
-        std::cout << ";\n";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\": \"let\",\n"
+                << pad << "  \"name\": \"" << var_name << "\"";
+
+        if (is_mutable) {
+            std::cout << ",\n" << pad << "  \"mutable\": true";
+        }
+        if (!type_name.empty()) {
+            std::cout << ",\n" << pad << "  \"declared_type\": \"" << type_name << "\"";
+        }
+        std::cout << ",\n" << pad << "  \"value\": ";
+        if (value) value->to_json(indent + 4);
+        else std::cout << "null";
+        std::cout << "\n" << pad << "}";
     }
 };
 
 
 struct StmtReturn : Stmt {
     StmtReturn(Expr* v) { value = v; }
-    void print() override {
-        std::cout << "return";
-        if (value) { std::cout << " "; value->print(); }
-        std::cout << ";\n";
+    void to_json(int indent = 0) override {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                  << pad << "  \"type\": \"return\",\n"
+                  << pad << "  \"value\": ";
+        if (value) value->to_json(indent + 2);
+        else std::cout << "null";
+        std::cout << "\n" << pad << "}";
     }
 };
 
@@ -212,21 +287,24 @@ struct Function {
     std::string ret_type; 
     std::vector<Stmt*> body; 
 
-    void print() {
-        std::cout << "fn " << name << "(";
-        for (size_t i = 0; i < params.size(); ++i) {
-            std::cout << params[i].first << ": " << params[i].second;
-            if (i + 1 < params.size()) std::cout << ", ";
+    void to_json(int indent = 0) {
+        std::string pad(indent, ' ');
+        std::cout << pad << "{\n"
+                << pad << "  \"type\":\"function\",\n"
+                << pad << "  \"name\":\"" << name << "\",\n"
+                << pad << "  \"params\":[";
+        for (size_t i = 0; i < params.size(); i++) {
+            std::cout << "{\"name\":\"" << params[i].first 
+                    << "\",\"type\":\"" << params[i].second << "\"}";
+            if (i + 1 < params.size()) std::cout << ",";
         }
-        std::cout << ")";
-        if (!ret_type.empty())
-            std::cout << " -> " << ret_type;
-        std::cout << " {\n";
-
-        for (auto stmt : body)
-            stmt->print();   
-
-        std::cout << "}\n";
+        std::cout << "],\n" << pad << "  \"body\":[\n";
+        for (size_t i = 0; i < body.size(); i++) {
+            body[i]->to_json(indent + 4);
+            if (i + 1 < body.size()) std::cout << ",";
+            std::cout << "\n";
+        }
+        std::cout << pad << "  ]\n" << pad << "}";
     }
 };
 

@@ -13,6 +13,7 @@
 "return"    { return RETURN; }
 "for"       { return FOR; }
 "in"        { return IN; }
+"mut"       { return MUT; }
 "i32"       { return I32; }
 "f64"       { return F64; }
 "bool"      { return BOOL; }
@@ -28,6 +29,8 @@
 [0-9]+                  { yylval.num = atoi(yytext); return NUMBER; }
 \'([^\'\\]|\\.)\'       { yylval.id = strdup(yytext); return CHAR_LITERAL; }
 \"([^\"\\]|\\.)*\"      { yylval.id = strdup(yytext); return STRING_LITERAL; }
+
+"//".*      {  }
 
 "+"     { return PLUS; }
 "-"     { return MINUS; }
@@ -48,6 +51,7 @@
 ">="    { return GEQ; }
 "<"     { return LT; }
 ">"     { return GT; }
+"%"     { return MOD;}
 ":"     { return COLON; }
 "->"    { return ARROW; }
 
